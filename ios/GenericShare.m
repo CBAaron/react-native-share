@@ -19,7 +19,32 @@
     NSLog(@"Try open view");
     if([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:inAppBaseUrl]]) {
 
-        SLComposeViewController *composeController = [SLComposeViewController  composeViewControllerForServiceType:serviceType];
+        
+        // SLComposeViewController presents as full screen but does not hide the status bar which cuts part of it off
+        [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
+        
+        SLComposeViewController *composeController = [SLComposeViewController composeViewControllerForServiceType:serviceType];
+        composeController.completionHandler = ^(SLComposeViewControllerResult result) {
+            switch(result) {
+                case SLComposeViewControllerResultCancelled:
+                default: {
+                    [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone];
+                    NSString *errorMessage = @"Generic share cancelled";
+                    NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedString(errorMessage, nil)};
+                    NSError *error = [NSError errorWithDomain:@"com.rnshare" code:1 userInfo:userInfo];
+
+                    NSLog(@"%@", errorMessage);
+                    failureCallback(error);
+                }
+                break;
+                case SLComposeViewControllerResultDone: {
+                   [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone];
+                   NSLog(@"Posted....");
+                   successCallback(@[]);
+                }
+                break;
+            }
+        };
 
         NSURL *URL = [RCTConvert NSURL:options[@"url"]];
         if (URL) {
